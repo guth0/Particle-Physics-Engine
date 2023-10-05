@@ -7,7 +7,7 @@
 
 const int windowHeight = 600;
 const int windowWidth = 800;
-const float RADIUS = 10;
+const float RADIUS = 5;
 const float restitution = 0.75f; // % bouncy or % energy conserved through collision
 const int winBallHeight = ceil(windowHeight / RADIUS);
 const int winBallWidth = ceil(windowWidth / RADIUS);
@@ -244,7 +244,7 @@ int main()
     // }
 
     particleSystem.gravity.x = 0.0f;
-    particleSystem.gravity.y = 9.81f * 60; // 9.81 m/s
+    particleSystem.gravity.y = 9.81f * 10; // 9.81 m/s
 
     particleSystem.setDamping(0.5f);
 
@@ -254,7 +254,7 @@ int main()
 
     float hue = 0.0f;
 
-    int numBalls = 200;
+    int numBalls = 20070;
     int i = 0;
 
     while (window.isOpen())
