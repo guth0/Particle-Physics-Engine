@@ -9,6 +9,8 @@ const int windowHeight = 600;
 const int windowWidth = 800;
 const float RADIUS = 10;
 const float restitution = 0.75f; // % bouncy or % energy conserved through collision
+const int winBallHeight = ceil(windowHeight / RADIUS);
+const int winBallWidth = ceil(windowWidth / RADIUS);
 
 class Particle
 {
@@ -131,10 +133,23 @@ public:
             for (int i = 0; i < particles.size(); i++)
             {
                 Particle &particle1 = particles[i];
+
+                sf::Vector2f pos1 = particle1.shape.getPosition();
+                int XCell1 = floor(pos1.x / winBallWidth);
+                int YCell1 = floor(pos1.y / winBallHeight);
+
                 for (int j = i + 1; j < particles.size(); j++)
                 {
                     Particle &particle2 = particles[j];
-                    handleParticleCollision(particle1, particle2);
+
+                    sf::Vector2f pos2 = particle2.shape.getPosition();
+                    int XCell2 = floor(pos2.x / winBallWidth);
+                    int YCell2 = floor(pos2.y / winBallHeight);
+
+                    if (XCell1 == XCell2 && YCell1 == YCell2) // if the particles are within range
+                    {
+                        handleParticleCollision(particle1, particle2);
+                    }
                 }
             }
         }
@@ -158,61 +173,61 @@ public:
         dampingCoefficient = damping;
     }
 
-    void handleParticleCollision(Particle &particle1, Particle &particle2)
-    {
-        // Calculate the distance between the centers of the particles
-        sf::Vector2f delta = particle2.shape.getPosition() - particle1.shape.getPosition();
-        float distance = sqrt(delta.x * delta.x + delta.y * delta.y);
-
-        // Check if particles are colliding and distance is not zero
-        if (distance > 0 && distance < particle1.radius + particle2.radius)
-        {
-            // Calculate penetration depth
-            float overlap = (particle1.radius + particle2.radius) - distance;
-
-            // Calculate collision normal
-            sf::Vector2f collisionNormal = delta / distance;
-
-            // Move particles away from each other
-            sf::Vector2f displacement = 0.5f * overlap * collisionNormal;
-            particle1.shape.move(-displacement);
-            particle2.shape.move(displacement);
-        }
-    }
-
     // void handleParticleCollision(Particle &particle1, Particle &particle2)
     // {
     //     // Calculate the distance between the centers of the particles
     //     sf::Vector2f delta = particle2.shape.getPosition() - particle1.shape.getPosition();
     //     float distance = sqrt(delta.x * delta.x + delta.y * delta.y);
 
-    //     // Check if particles are colliding
-    //     if (distance < particle1.radius + particle2.radius)
+    //     // Check if particles are colliding and distance is not zero
+    //     if (distance > 0 && distance < particle1.radius + particle2.radius)
     //     {
+    //         // Calculate penetration depth
+    //         float overlap = (particle1.radius + particle2.radius) - distance;
+
     //         // Calculate collision normal
     //         sf::Vector2f collisionNormal = delta / distance;
 
-    //         // Calculate relative velocity
-    //         sf::Vector2f relativeVelocity = particle2.velocity - particle1.velocity;
-    //         float dotProduct = relativeVelocity.x * collisionNormal.x + relativeVelocity.y * collisionNormal.y;
-
-    //         // Check if particles are moving towards each other
-    //         if (dotProduct < 0)
-    //         {
-    //             // Calculate impulse
-    //             float impulse = (-(1 + restitution) * dotProduct) / (1 / particle1.mass + 1 / particle2.mass);
-
-    //             // Apply impulse
-    //             particle1.velocity -= (impulse / particle1.mass) * collisionNormal;
-    //             particle2.velocity += (impulse / particle2.mass) * collisionNormal;
-
-    //             // Separate particles to avoid overlap
-    //             float overlap = (particle1.radius + particle2.radius - distance) / 2;
-    //             particle1.shape.move(-overlap * collisionNormal);
-    //             particle2.shape.move(overlap * collisionNormal);
-    //         }
+    //         // Move particles away from each other
+    //         sf::Vector2f displacement = 0.5f * overlap * collisionNormal;
+    //         particle1.shape.move(-displacement);
+    //         particle2.shape.move(displacement);
     //     }
     // }
+
+    void handleParticleCollision(Particle &particle1, Particle &particle2)
+    {
+        // Calculate the distance between the centers of the particles
+        sf::Vector2f delta = particle2.shape.getPosition() - particle1.shape.getPosition();
+        float distance = sqrt(delta.x * delta.x + delta.y * delta.y);
+
+        // Check if particles are colliding
+        if (distance < particle1.radius + particle2.radius)
+        {
+            // Calculate collision normal
+            sf::Vector2f collisionNormal = delta / distance;
+
+            // Calculate relative velocity
+            sf::Vector2f relativeVelocity = particle2.velocity - particle1.velocity;
+            float dotProduct = relativeVelocity.x * collisionNormal.x + relativeVelocity.y * collisionNormal.y;
+
+            // Check if particles are moving towards each other
+            if (dotProduct < 0)
+            {
+                // Calculate impulse
+                float impulse = (-(1 + restitution) * dotProduct) / (1 / particle1.mass + 1 / particle2.mass);
+
+                // Apply impulse
+                particle1.velocity -= (impulse / particle1.mass) * collisionNormal;
+                particle2.velocity += (impulse / particle2.mass) * collisionNormal;
+
+                // Separate particles to avoid overlap
+                float overlap = (particle1.radius + particle2.radius - distance) / 2;
+                particle1.shape.move(-overlap * collisionNormal);
+                particle2.shape.move(overlap * collisionNormal);
+            }
+        }
+    }
 };
 
 int main()
@@ -239,7 +254,7 @@ int main()
 
     float hue = 0.0f;
 
-    int numBalls = 00;
+    int numBalls = 200;
     int i = 0;
 
     while (window.isOpen())
@@ -252,8 +267,6 @@ int main()
                 window.close();
             break;
         }
-
-        sf::Color color = HSVtoRGB(hue, 1.0f, 1.0f);
 
         if (i <= numBalls)
         {
