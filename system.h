@@ -4,225 +4,195 @@
 struct Particle
 {
 public:
-    sf::CircleShape shape;
-    sf::Vector2f velocity;
-    sf::Color particleColor;
-    float radius;
-    float mass = 1;
+    sf::Vector2f position;
+    sf::Vector2f position_last;
+    sf::Vector2f acceleration;
 
-    Particle(float x, float y, float radius)
-        : shape(radius), velocity(0.0f, 0.0f), radius(radius)
+    float radius = 10.0f;
+    sf::Color color = sf::Color::White;
+
+    // Particle() = default;
+
+    Particle(sf::Vector2f position_, float radius_) // constructor
+        : position{position_}, position_last{position_}, acceleration{0.0f, 0.0f}, radius{radius_}
     {
-        shape.setPosition(x, y);
-        shape.setFillColor(sf::Color::Blue); // defaunt color
-        shape.setOrigin(radius, radius);     // Center the origin for rotation
     }
 
-    void setVelocity(float x, float y) // Set the velocity
+    void update(float dt)
     {
-        velocity.x = x;
-        velocity.y = y;
+        // Compute how much particle moved
+        const sf::Vector2f displacement = position - position_last;
+        // Update pos
+
+        position_last = position;
+        position = position + displacement + acceleration * (dt * dt); // no dampening
+
+        // with dampening
+        // constexpr float damp_coef = 0.9f;
+        // position = position + displacement + (acceleration * (damp_coef / (radius / 10))) * (dt * dt);
+
+        // Reset acceleration
+        acceleration = {};
     }
 
-    void applyImpulse(float x, float y) // Change the velocity
+    void accelerate(sf::Vector2f a)
     {
-        velocity.x += x;
-        velocity.y += y;
+        acceleration += a;
     }
 
-    void setColor(sf::Color color) // set color
+    void setVelocity(sf::Vector2f v, float dt)
     {
-        shape.setFillColor(color);
+        position_last = position - (v * dt);
     }
 
-    void wallBounce(float restitution)
+    void addVelocity(sf::Vector2f v, float dt)
     {
-
-        // Check for collisions with side walls
-        if (shape.getPosition().x - radius < 0)
-        {
-            // Collision with left boundary
-            shape.setPosition(radius, shape.getPosition().y);
-            velocity.x = -velocity.x * restitution; // Reverse the horizontal velocity
-        }
-        else if (shape.getPosition().x + radius > windowWidth)
-        {
-            // Collision with right boundary
-            shape.setPosition(windowWidth - radius, shape.getPosition().y);
-            velocity.x = -velocity.x * restitution; // Reverse the horizontal velocity
-        }
-
-        // colides with top/bottom
-        if (shape.getPosition().y - radius <= 0)
-        {
-            shape.setPosition(shape.getPosition().x, radius);
-            velocity.y = fabs(velocity.y) * restitution; // change the y velocity to pos
-        }
-
-        if (shape.getPosition().y + radius >= windowHeight)
-        {
-            velocity.y = -fabs(velocity.y) * restitution; // change the y velocity to neg
-            shape.setPosition(shape.getPosition().x, windowHeight - radius);
-        }
+        position_last -= v * dt;
     }
 
-    void update(float Dtime, sf::Vector2f gravity, float dampCoef)
+    // nodiscard gives warning when calling function without using the return for anything
+    [[nodiscard]] sf::Vector2f getVelocity(float dt) const
     {
-        // Update particle position based on velocity here
-        shape.move(velocity * Dtime);
-
-        wallBounce();
-
-        velocity += gravity * Dtime; // apply gravity
-
-        sf::Vector2f dampingForce = -velocity * dampCoef;
-        velocity += dampingForce * Dtime; // use (dampingForce / mass) * Dtime if mass is involved
-
-        // if (fabs(velocity.x) < 0.25f)
-        // {
-        //     velocity.x = 0;
-        // }
-
-        // if (fabs(velocity.y) < 0.25f)
-        // {
-        //     velocity.y = 0;
-        // }
-
-        // Apply any other forces or interactions here
-    }
-
-    void draw(sf::RenderWindow &window)
-    {
-        window.draw(shape);
+        return (position - position_last) / dt;
     }
 };
 
 class ParticleSystem
 {
 public:
-    std::vector<Particle> particles;
-    sf::Vector2f gravity;
+    ParticleSystem() = default; // Auto create default constructor
 
-    float restitution; // % energy conserved through collision
-
-    float dampingCoefficient;
-
-    void addParticle(float x, float y, float radius)
+    Particle &addParticle(sf::Vector2f position, float radius)
     {
-        particles.emplace_back(x, y, radius);
+        return m_particles.emplace_back(position, radius);
     }
 
-    void setGravity(float x, float y) // set the gravity
+    void update()
     {
-        gravity.x = x;
-        gravity.y = y;
-    }
-
-    void setRestitution(float x)
-    {
-        restitution = x;
-    }
-
-    void update(float Dtime)
-    {
-        for (int n = 0; n < 10; n++)
+        m_time += m_frame_dt;
+        const float step_dt = getStepDt();
+        for (uint32_t i{m_num_substep}; i--;)
         {
-            for (int i = 0; i < particles.size(); i++)
+            applyGravity();
+            checkCollisions(step_dt);
+            applyConstraint();
+            updateParticles(step_dt);
+        }
+    }
+
+    void setSimulationUpdateRate(uint32_t rate)
+    {
+        m_frame_dt = 1.0f / static_cast<float>(rate);
+    }
+
+    void setConstraint(sf::Vector2f position, float radius)
+    {
+        m_constraint_center = position;
+        m_constraint_radius = radius;
+    }
+
+    void setSubStepsCount(uint32_t sub_steps)
+    {
+        m_num_substep = sub_steps;
+    }
+
+    void setParticleVelocity(Particle &particle, sf::Vector2f v)
+    {
+        particle.setVelocity(v, getStepDt());
+    }
+
+    [[nodiscard]] const std::vector<Particle> &getParticles() const
+    {
+        return m_particles;
+    }
+
+    [[nodiscard]] sf::Vector3f getConstraint() const
+    {
+        return {m_constraint_center.x, m_constraint_center.y, m_constraint_radius};
+    }
+
+    [[nodiscard]] uint64_t getParticleCount() const
+    {
+        return m_particles.size();
+    }
+
+    [[nodiscard]] float getTime() const
+    {
+        return m_time;
+    }
+
+    [[nodiscard]] float getStepDt() const
+    {
+        return m_frame_dt / static_cast<float>(m_num_substep);
+    }
+
+private:
+    uint32_t m_num_substep = 1;
+    sf::Vector2f gravity = {0.0f, 1000.0f};
+    sf::Vector2f m_constraint_center;
+    float m_constraint_radius = 100.0f;
+    std::vector<Particle> m_particles;
+    float m_time = 0.0f;
+    float m_frame_dt = 0.0f;
+
+    void applyGravity()
+    {
+        for (auto &particle : m_particles)
+        {
+            particle.accelerate(gravity);
+        }
+    }
+
+    void checkCollisions(float dt)
+    {
+        const float response_coef = 0.75f;
+        const uint64_t particleCount = m_particles.size();
+
+        for (uint64_t i{0}; i < particleCount; ++i)
+        {
+            Particle &particle1 = m_particles[i];
+
+            for (uint64_t k{i + 1}; k < particleCount; ++k)
             {
-                Particle &particle1 = particles[i];
-
-                sf::Vector2f pos1 = particle1.shape.getPosition();
-                int XCell1 = floor(pos1.x / winBallWidth);
-                int YCell1 = floor(pos1.y / winBallHeight);
-
-                for (int j = i + 1; j < particles.size(); j++)
+                Particle &particle2 = m_particles[k];
+                const sf::Vector2f vec = particle1.position - particle2.position;
+                float dist = vec.x * vec.x + vec.y * vec.y;
+                const float minDist = particle1.radius + particle2.radius;
+                // Check overlapping
+                if (dist < minDist * minDist)
                 {
-                    Particle &particle2 = particles[j];
-
-                    sf::Vector2f pos2 = particle2.shape.getPosition();
-                    int XCell2 = floor(pos2.x / winBallWidth);
-                    int YCell2 = floor(pos2.y / winBallHeight);
-
-                    if (XCell1 == XCell2 && YCell1 == YCell2) // if the particles are within range
-                    {
-                        handleParticleCollision(particle1, particle2);
-                    }
+                    dist = sqrt(dist);
+                    const sf::Vector2f n = vec / dist;
+                    const float massRatio1 = particle1.radius / (particle1.radius + particle2.radius);
+                    const float massRatio2 = particle2.radius / (particle1.radius + particle2.radius);
+                    const float delta = 0.5f * response_coef * (dist - minDist);
+                    // Update positions
+                    particle1.position -= n * (massRatio2 * delta);
+                    particle2.position += n * (massRatio1 * delta);
                 }
             }
         }
+    }
 
-        for (auto &particle : particles)
+    void applyConstraint()
+    {
+        for (auto &particle : m_particles)
         {
-            particle.update(Dtime, gravity, dampingCoefficient);
+            const sf::Vector2f v = m_constraint_center - particle.position;
+            const float dist = sqrt(v.x * v.x + v.y * v.y);
+            if (dist > (m_constraint_radius - particle.radius))
+            {
+                const sf::Vector2f n = v / dist;
+                particle.position = m_constraint_center - n * (m_constraint_radius - particle.radius);
+            }
         }
     }
 
-    void draw(sf::RenderWindow &window)
+    void updateParticles(float dt)
     {
-        for (auto &particle : particles)
+        for (auto &particle : m_particles)
         {
-            particle.draw(window);
+            particle.update(dt);
         }
     }
-
-    void setDamping(float damping)
-    {
-        dampingCoefficient = damping;
-    }
-
-    void handleParticleCollision(Particle &particle1, Particle &particle2)
-    {
-        // Calculate the distance between the centers of the particles
-        sf::Vector2f delta = particle2.shape.getPosition() - particle1.shape.getPosition();
-        float distance = sqrt(delta.x * delta.x + delta.y * delta.y);
-
-        // Check if particles are colliding and distance is not zero
-        if (distance > 0 && distance < particle1.radius + particle2.radius)
-        {
-            // Calculate penetration depth
-            float overlap = (particle1.radius + particle2.radius) - distance;
-
-            // Calculate collision normal
-            sf::Vector2f collisionNormal = delta / distance;
-
-            // Move particles away from each other
-            sf::Vector2f displacement = 0.5f * overlap * collisionNormal;
-            particle1.shape.move(-displacement);
-            particle2.shape.move(displacement);
-        }
-    }
-
-    // void handleParticleCollision(Particle &particle1, Particle &particle2)
-    // {
-    //     // Calculate the distance between the centers of the particles
-    //     sf::Vector2f delta = particle2.shape.getPosition() - particle1.shape.getPosition();
-    //     float distance = sqrt(delta.x * delta.x + delta.y * delta.y);
-
-    //     // Check if particles are colliding
-    //     if (distance < particle1.radius + particle2.radius)
-    //     {
-    //         // Calculate collision normal
-    //         sf::Vector2f collisionNormal = delta / distance;
-
-    //         // Calculate relative velocity
-    //         sf::Vector2f relativeVelocity = particle2.velocity - particle1.velocity;
-    //         float dotProduct = relativeVelocity.x * collisionNormal.x + relativeVelocity.y * collisionNormal.y;
-
-    //         // Check if particles are moving towards each other
-    //         if (dotProduct < 0)
-    //         {
-    //             // Calculate impulse
-    //             float impulse = (-(1 + restitution) * dotProduct) / (1 / particle1.mass + 1 / particle2.mass);
-
-    //             // Apply impulse
-    //             particle1.velocity -= (impulse / particle1.mass) * collisionNormal;
-    //             particle2.velocity += (impulse / particle2.mass) * collisionNormal;
-
-    //             // Separate particles to avoid overlap
-    //             float overlap = (particle1.radius + particle2.radius - distance) / 2;
-    //             particle1.shape.move(-overlap * collisionNormal);
-    //             particle2.shape.move(overlap * collisionNormal);
-    //         }
-    //     }
-    // }
 };

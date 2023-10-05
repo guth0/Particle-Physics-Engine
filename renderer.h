@@ -12,7 +12,7 @@ public:
     void render(const ParticleSystem &system) const
     {
         // Render constraint
-        const sf::Vector3f constraint = system.getConstraint();
+        const sf::Vector3f constraint = system.getConstraint(); // returns x, y, radius
         sf::CircleShape constraint_background{constraint.z};
         constraint_background.setOrigin(constraint.z, constraint.z);
         constraint_background.setFillColor(sf::Color::Black);
@@ -24,12 +24,12 @@ public:
         sf::CircleShape circle{1.0f};
         circle.setPointCount(32);
         circle.setOrigin(1.0f, 1.0f);
-        const auto &objects = system.getObjects();
-        for (const auto &obj : objects)
+        const auto &particles = system.getParticles();
+        for (const auto &particle : particles)
         {
-            circle.setPosition(obj.position);
-            circle.setScale(obj.radius, obj.radius);
-            circle.setFillColor(obj.color);
+            circle.setPosition(particle.position);
+            circle.setScale(particle.radius, particle.radius);
+            circle.setFillColor(particle.color);
             m_target.draw(circle);
         }
     }
