@@ -24,8 +24,8 @@ public:
         sf::CircleShape circle{1.0f};
         circle.setPointCount(32);
         circle.setOrigin(1.0f, 1.0f);
-        const auto &particles = system.getParticles();
-        for (const auto &particle : particles)
+        const std::vector<Particle> &particles = system.getParticles();
+        for (const Particle &particle : particles)
         {
             circle.setPosition(particle.position);
             circle.setScale(particle.radius, particle.radius);

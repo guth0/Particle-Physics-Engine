@@ -137,7 +137,7 @@ private:
 
     void applyGravity()
     {
-        for (auto &particle : m_particles)
+        for (Particle &particle : m_particles)
         {
             particle.accelerate(gravity);
         }
@@ -176,7 +176,7 @@ private:
 
     void applyConstraint()
     {
-        for (auto &particle : m_particles)
+        for (Particle &particle : m_particles)
         {
             const sf::Vector2f v = m_constraint_center - particle.position;
             const float dist = sqrt(v.x * v.x + v.y * v.y);
@@ -190,7 +190,7 @@ private:
 
     void updateParticles(float dt)
     {
-        for (auto &particle : m_particles)
+        for (Particle &particle : m_particles)
         {
             particle.update(dt);
         }
