@@ -46,7 +46,7 @@ int main()
     const float particle_spawn_delay = 0.025f;
     const float particle_spawn_speed = 1200.0f;
     const sf::Vector2f particle_spawn_position = {window_width / 2, 200.0f};
-    const float particle_min_radius = 6.0f;
+    const float particle_min_radius = 5.0f;
     const float particle_max_radius = 15.0f;
     const uint32_t max_particle_count = 1000;
     const float max_angle = 1.0f;
