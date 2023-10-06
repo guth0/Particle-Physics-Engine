@@ -20,12 +20,14 @@ public:
         for (uint32_t i{m_num_substep}; i--;)
         {
             // applyGravity();
-
             applyAttraction();
 
-            updateGrid();
-            handleGrid(step_dt);
+            // clearGrid();
+            // updateGrid();
+            // handleGrid(step_dt);
+
             applyConstraint();
+
             updateParticles(step_dt);
         }
     }
@@ -189,6 +191,17 @@ private:
         }
     }
 
+    void clearGrid()
+    {
+        for (auto &column : m_grid)
+        {
+            for (auto &cell : column)
+            {
+                cell.clear();
+            }
+        }
+    }
+
     void updateGrid()
     {
         for (Particle &particle : m_particles)
@@ -214,7 +227,10 @@ private:
 
                         for (Particle &particle2 : m_grid[x + x_deltas[i]][y + y_deltas[i]])
                         {
-                            checkCollisions(dt, particle1, particle2);
+                            if (&particle1 != &particle2)
+                            {
+                                checkCollisions(dt, particle1, particle2);
+                            }
                         }
                     }
                 }

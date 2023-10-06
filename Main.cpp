@@ -67,6 +67,9 @@ int main()
 
     sf::Clock clock;
 
+    constexpr float wait_time = 0.5f; // wait x seconds before spawning any particles
+    bool has_waited = false;
+
     while (window.isOpen())
     {
 
@@ -81,15 +84,23 @@ int main()
         }
 
         // Spawn particles
-        if (particleSystem.getParticleCount() < max_particle_count && clock.getElapsedTime().asSeconds() >= particle_spawn_delay)
+        if (has_waited)
         {
-            clock.restart();
-            const float t = particleSystem.getTime();
-            Particle &particle = particleSystem.addParticle(particle_spawn_position, RADIUS);
-            const float angle = max_angle * sin(t) + M_PI * 0.5f;
-            particleSystem.setParticleVelocity(particle, particle_spawn_speed * sf::Vector2f{cos(angle), sin(angle)});
-            particle.color = getRainbow(t);
+            if (particleSystem.getParticleCount() < max_particle_count && clock.getElapsedTime().asSeconds() >= particle_spawn_delay)
+            {
+                clock.restart();
+                const float t = particleSystem.getTime();
+                Particle &particle = particleSystem.addParticle(particle_spawn_position, RADIUS);
+                const float angle = max_angle * sin(t) + M_PI * 0.5f;
+                particleSystem.setParticleVelocity(particle, particle_spawn_speed * sf::Vector2f{cos(angle), sin(angle)});
+                particle.color = getRainbow(t);
+            }
         }
+        else if (clock.getElapsedTime().asSeconds() >= wait_time)
+        {
+            has_waited = true;
+        }
+
         // Spawn particles
 
         // Update particle system
