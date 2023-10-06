@@ -8,6 +8,8 @@
 constexpr uint16_t window_height = 850;
 constexpr uint16_t window_width = window_height * 1512 / 982;
 const sf::Color background_color = {0, 0, 0};
+constexpr uint8_t RADIUS = 5;
+const std::pair<uint8_t, uint8_t> gridSize = std::make_pair(ceil(window_width / (RADIUS * 2)), ceil(window_height / (RADIUS * 2)));
 
 static sf::Color getRainbow(float t)
 {
@@ -38,12 +40,16 @@ int main()
     particleSystem.setSubStepsCount(8);
     particleSystem.setSimulationUpdateRate(frame_rate);
 
+    particleSystem.resizeGrid(gridSize);
+
     particleSystem.setAttractionFactor(5.0f);
 
     const sf::Vector2i window_resolution = {window_width, window_height};
     particleSystem.setConstraintBuffer(window_resolution, 20);
 
     particleSystem.setCenter(static_cast<sf::Vector2f>(window_resolution));
+
+    particleSystem.setStandardRadius(RADIUS);
     // Setup system parameters
 
     Renderer renderer{window};
@@ -56,7 +62,7 @@ int main()
     const sf::Vector2f particle_spawn_position = {window_width / 2, 200.0f};
     constexpr uint32_t max_particle_count = 1000;
     constexpr float max_angle = 1.0f;
-    // Set simulation Attributes
+    // Set simulation attributes
 
     sf::Clock clock;
 
@@ -78,8 +84,7 @@ int main()
         {
             clock.restart();
             const float t = particleSystem.getTime();
-            const float radius = 5.0f;
-            Particle &particle = particleSystem.addParticle(particle_spawn_position, radius);
+            Particle &particle = particleSystem.addParticle(particle_spawn_position, RADIUS);
             const float angle = max_angle * sin(t) + M_PI * 0.5f;
             particleSystem.setParticleVelocity(particle, particle_spawn_speed * sf::Vector2f{cos(angle), sin(angle)});
             particle.color = getRainbow(t);
