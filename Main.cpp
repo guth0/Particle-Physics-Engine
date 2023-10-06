@@ -23,6 +23,7 @@ static sf::Color getRainbow(float t)
 
 int main()
 {
+
     // Set up window
     sf::ContextSettings settings;
     settings.antialiasingLevel = 1;

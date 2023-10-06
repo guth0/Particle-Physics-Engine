@@ -1,4 +1,5 @@
 #pragma once
+#include <iostream>
 #include <SFML/Graphics.hpp>
 #include "particle.h"
 
@@ -192,8 +193,8 @@ private:
     {
         for (Particle &particle : m_particles)
         {
-            int x = static_cast<int>(particle.position.x / m_standard_radius * 2);
-            int y = static_cast<int>(particle.position.y / m_standard_radius * 2);
+            int x = static_cast<int>(particle.position.x / (m_standard_radius * 2));
+            int y = static_cast<int>(particle.position.y / (m_standard_radius * 2));
 
             m_grid[x][y].push_back(particle);
         }
@@ -201,15 +202,16 @@ private:
 
     void handleGrid(float dt)
     {
-
-        for (int x = 0; x < m_grid_dimensions.first; ++x)
+        std::cout << "# Particles: " << getParticleCount() << std::endl;
+        for (int x = 0; x < m_grid_dimensions.first; x++)
         {
-            for (int y = 0; y < m_grid_dimensions.second; ++y)
+            for (int y = 0; y < m_grid_dimensions.second; y++)
             {
                 for (Particle &particle1 : m_grid[x][y])
                 {
                     for (int i = 0; i < 9; i++)
                     {
+
                         for (Particle &particle2 : m_grid[x + x_deltas[i]][y + y_deltas[i]])
                         {
                             checkCollisions(dt, particle1, particle2);
