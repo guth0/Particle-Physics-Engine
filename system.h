@@ -73,7 +73,10 @@ public:
         const float step_dt = getStepDt();
         for (uint32_t i{m_num_substep}; i--;)
         {
-            applyGravity();
+            // applyGravity();
+
+            applyAttraction();
+
             checkCollisions(step_dt);
             applyConstraint();
             updateParticles(step_dt);
@@ -85,15 +88,37 @@ public:
         m_frame_dt = 1.0f / static_cast<float>(rate);
     }
 
-    void setConstraint(sf::Vector2f position, float radius)
+    // void setConstraint(sf::Vector2f position, float radius)
+    // {
+    //     m_constraint_center = position;
+    //     m_constraint_radius = radius;
+    // }
+
+    void setConstraintBuffer(sf::Vector2i window_resolution, int buffer)
     {
-        m_constraint_center = position;
-        m_constraint_radius = radius;
+        m_constraint_border = buffer;
+
+        m_horozontal_constraints.x = buffer;
+        m_vertical_constraints.x = buffer;
+
+        m_horozontal_constraints.y = window_resolution.x - buffer;
+        m_vertical_constraints.y = window_resolution.y - buffer;
     }
 
-    void setSubStepsCount(uint32_t sub_steps)
+    void setCenter(sf::Vector2f window_resolution)
+    {
+        m_center = window_resolution * .5f;
+    }
+
+    void
+    setSubStepsCount(uint32_t sub_steps)
     {
         m_num_substep = sub_steps;
+    }
+
+    void setAttractionFactor(float x)
+    {
+        m_attraction_factor = x;
     }
 
     void setParticleVelocity(Particle &particle, sf::Vector2f v)
@@ -106,10 +131,10 @@ public:
         return m_particles;
     }
 
-    [[nodiscard]] sf::Vector3f getConstraint() const
-    {
-        return {m_constraint_center.x, m_constraint_center.y, m_constraint_radius};
-    }
+    // [[nodiscard]] sf::Vector3f getConstraint() const
+    // {
+    //     return {m_constraint_center.x, m_constraint_center.y, m_constraint_radius};
+    // }
 
     [[nodiscard]] uint64_t getParticleCount() const
     {
@@ -129,11 +154,27 @@ public:
 private:
     uint32_t m_num_substep = 1;
     sf::Vector2f gravity = {0.0f, 1000.0f};
-    sf::Vector2f m_constraint_center;
-    float m_constraint_radius = 100.0f;
+    sf::Vector2f m_center;
+    // float m_constraint_radius = 100.0f;
+    int m_constraint_border = 0; // distance from edge of window
     std::vector<Particle> m_particles;
     float m_time = 0.0f;
     float m_frame_dt = 0.0f;
+    float m_attraction_factor = 0.1f;
+    sf::Vector2i m_horozontal_constraints = {0, 800};
+    sf::Vector2i m_vertical_constraints = {0, 800};
+
+    void applyAttraction()
+    {
+        for (Particle &particle : m_particles)
+        {
+            const sf::Vector2f direction = m_center - particle.position;
+
+            const sf::Vector2f attraction_force = direction * m_attraction_factor;
+
+            particle.accelerate(attraction_force);
+        }
+    }
 
     void applyGravity()
     {
@@ -174,21 +215,46 @@ private:
         }
     }
 
+    // void applyConstraint()
+    // {
+    //     for (Particle &particle : m_particles)
+    //     {
+    //         const sf::Vector2f v = m_constraint_center - particle.position;
+    //         const float dist = sqrt(v.x * v.x + v.y * v.y);
+    //         if (dist > (m_constraint_radius - particle.radius))
+    //         {
+    //             const sf::Vector2f n = v / dist;
+    //             particle.position = m_constraint_center - n * (m_constraint_radius - particle.radius);
+    //         }
+    //     }
+    // }
+
     void applyConstraint()
     {
         for (Particle &particle : m_particles)
         {
-            const sf::Vector2f v = m_constraint_center - particle.position;
-            const float dist = sqrt(v.x * v.x + v.y * v.y);
-            if (dist > (m_constraint_radius - particle.radius))
+            if (particle.position.x < m_horozontal_constraints.x + particle.radius)
             {
-                const sf::Vector2f n = v / dist;
-                particle.position = m_constraint_center - n * (m_constraint_radius - particle.radius);
+                particle.position.x = m_horozontal_constraints.x + particle.radius;
+            }
+            else if (particle.position.x > m_horozontal_constraints.y - particle.radius)
+            {
+                particle.position.x = m_horozontal_constraints.y - particle.radius;
+            }
+
+            if (particle.position.y > m_vertical_constraints.y - particle.radius)
+            {
+                particle.position.y = m_vertical_constraints.y - particle.radius;
+            }
+            else if (particle.position.y < m_vertical_constraints.x + particle.radius)
+            {
+                particle.position.y = m_vertical_constraints.x + particle.radius;
             }
         }
     }
 
-    void updateParticles(float dt)
+    void
+    updateParticles(float dt)
     {
         for (Particle &particle : m_particles)
         {

@@ -7,8 +7,7 @@
 
 constexpr uint16_t window_height = 850;
 constexpr uint16_t window_width = window_height * 1512 / 982;
-const sf::Color background_color = {50, 50, 50};
-constexpr float RADIUS = 10;
+const sf::Color background_color = {0, 0, 0};
 
 static sf::Color getRainbow(float t)
 {
@@ -24,38 +23,42 @@ int main()
 {
     // Set up window
     sf::ContextSettings settings;
-    settings.antialiasingLevel = 2;
+    settings.antialiasingLevel = 1;
     sf::RenderWindow window(sf::VideoMode(window_width, window_height), "Particle Simulation");
     constexpr uint32_t frame_rate = 60;
     window.setFramerateLimit(frame_rate);
-    // Set up winwow
+    // Set up window
 
     // Setup system parameters
     ParticleSystem particleSystem;
 
-    const float constraint_radius = std::min(window_width, window_height) * (.9f / 2);
-    particleSystem.setConstraint({static_cast<float>(window_width) * 0.5f, static_cast<float>(window_height) * 0.5f}, constraint_radius);
+    // const float constraint_radius = std::min(window_width, window_height) * (.9f / 2);
+    // particleSystem.setConstraint({static_cast<float>(window_width) * 0.5f, static_cast<float>(window_height) * 0.5f}, constraint_radius);
 
     particleSystem.setSubStepsCount(8);
     particleSystem.setSimulationUpdateRate(frame_rate);
+
+    particleSystem.setAttractionFactor(5.0f);
+
+    const sf::Vector2i window_resolution = {window_width, window_height};
+    particleSystem.setConstraintBuffer(window_resolution, 20);
+
+    particleSystem.setCenter(static_cast<sf::Vector2f>(window_resolution));
     // Setup system parameters
 
     Renderer renderer{window};
 
     // Set simulation attributes
-    const float particle_spawn_delay = 0.025f;
-    const float particle_spawn_speed = 1200.0f;
+    constexpr float particle_spawn_delay = 0.025f;
+    constexpr float particle_spawn_speed = 500.0f; // too slow will make particles collide off spawn
+    constexpr float particle_min_radius = 5.0f;
+    constexpr float particle_max_radius = 15.0f;
     const sf::Vector2f particle_spawn_position = {window_width / 2, 200.0f};
-    const float particle_min_radius = 5.0f;
-    const float particle_max_radius = 15.0f;
-    const uint32_t max_particle_count = 1000;
-    const float max_angle = 1.0f;
+    constexpr uint32_t max_particle_count = 1000;
+    constexpr float max_angle = 1.0f;
     // Set simulation Attributes
 
     sf::Clock clock;
-    float last_time = 0;
-    float elapsed;
-    int fps;
 
     while (window.isOpen())
     {
@@ -75,7 +78,7 @@ int main()
         {
             clock.restart();
             const float t = particleSystem.getTime();
-            const float radius = fabs(sin(t) * (particle_max_radius - particle_min_radius)) + particle_min_radius;
+            const float radius = 5.0f;
             Particle &particle = particleSystem.addParticle(particle_spawn_position, radius);
             const float angle = max_angle * sin(t) + M_PI * 0.5f;
             particleSystem.setParticleVelocity(particle, particle_spawn_speed * sf::Vector2f{cos(angle), sin(angle)});

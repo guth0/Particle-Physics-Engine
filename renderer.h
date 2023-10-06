@@ -11,14 +11,14 @@ public:
 
     void render(const ParticleSystem &system) const
     {
-        // Render constraint
-        const sf::Vector3f constraint = system.getConstraint(); // returns x, y, radius
-        sf::CircleShape constraint_background{constraint.z};
-        constraint_background.setOrigin(constraint.z, constraint.z);
-        constraint_background.setFillColor(sf::Color::Black);
-        constraint_background.setPosition(constraint.x, constraint.y);
-        constraint_background.setPointCount(128);
-        m_target.draw(constraint_background);
+        // Render constraintgetConstraint
+        // const sf::Vector3f constraint = system.getConstraint(); // returns x, y, radius
+        // sf::CircleShape constraint_background{constraint.z};
+        // constraint_background.setOrigin(constraint.z, constraint.z);
+        // constraint_background.setFillColor(sf::Color::Black);
+        // constraint_background.setPosition(constraint.x, constraint.y);
+        // constraint_background.setPointCount(128);
+        // m_target.draw(constraint_background);
 
         // Render objects
         sf::CircleShape circle{1.0f};
