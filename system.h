@@ -90,10 +90,6 @@ public:
         particle.setVelocity(v, getStepDt());
     }
 
-    void setGridSize()
-    {
-    }
-
     [[nodiscard]] const std::vector<Particle> &getParticles() const
     {
         return m_particles;
@@ -214,20 +210,21 @@ private:
 
     void checkCollisions(float dt, int index_1, int index_2)
     {
-
         constexpr float response_coef = 1.0f;
         constexpr float eps = 0.0001f;
 
         Particle &particle_1 = m_particles[index_1];
         Particle &particle_2 = m_particles[index_2];
-        const sf::Vector2f p2_p1 = particle_1.position - particle_2.position;
-        const float dist2 = p2_p1.x * p2_p1.x + p2_p1.y * p2_p1.y;
-        if (dist2 < m_standard_radius && dist2 > 0)
+
+        const sf::Vector2f vec = particle_1.position - particle_2.position;
+        const float dist2 = vec.x * vec.x + vec.y * vec.y;
+        const float diameter = m_standard_radius + m_standard_radius;
+        if (dist2 < (diameter * diameter) && dist2 > eps)
         {
             const float dist = sqrt(dist2);
 
-            const float delta = response_coef * 0.5f * (m_standard_radius - dist);
-            const sf::Vector2f col_vec = (p2_p1 / dist) * delta;
+            const float delta = response_coef * 0.5f * (diameter - dist);
+            const sf::Vector2f col_vec = (vec / dist) * delta;
             particle_1.position += col_vec;
             particle_2.position -= col_vec;
         }
