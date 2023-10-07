@@ -25,11 +25,7 @@ public:
         // Update pos
 
         position_last = position;
-        position = position + displacement + acceleration * (dt * dt); // no dampening
-
-        // with dampening
-        // constexpr float damp_coef = 0.9f;
-        // position = position + displacement + (acceleration * (damp_coef / (radius / 10))) * (dt * dt);
+        position = position + displacement + acceleration * (dt * dt);
 
         // Reset acceleration
         acceleration = {};
@@ -50,9 +46,20 @@ public:
         position_last -= v * dt;
     }
 
+    void slowdown(float ratio)
+    {
+        position_last = position_last + ratio * (position - position_last);
+    }
+
     // nodiscard gives warning when calling function without using the return for anything
     [[nodiscard]] sf::Vector2f getVelocity(float dt) const
     {
         return (position - position_last) / dt;
+    }
+
+    [[nodiscard]] float getSpeed() const
+    {
+        sf::Vector2f v = position - position_last;
+        return sqrt(v.x * v.x + v.y * v.y);
     }
 };

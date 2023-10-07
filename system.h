@@ -1,7 +1,10 @@
+// The grid is full of particles not pointers to particles
+
 #pragma once
 #include <iostream>
 #include <SFML/Graphics.hpp>
 #include "particle.h"
+#include "grid.h"
 
 class ParticleSystem
 {
@@ -15,6 +18,9 @@ public:
 
     void update()
     {
+        m_grid.clear();
+        updateGrid();
+
         m_time += m_frame_dt;
         const float step_dt = getStepDt();
         for (uint32_t i{m_num_substep}; i--;)
@@ -22,9 +28,9 @@ public:
             // applyGravity();
             applyAttraction();
 
-            // clearGrid();
-            // updateGrid();
-            // handleGrid(step_dt);
+            applyDrag();
+
+            handleGrid(step_dt);
 
             applyConstraint();
 
@@ -43,13 +49,14 @@ public:
 
     void resizeGrid(std::pair<uint8_t, uint8_t> dimensions)
     {
-        m_grid.resize(dimensions.first, std::vector<std::vector<Particle>>(dimensions.second));
-        m_grid_dimensions = dimensions;
+        m_grid.setSize(dimensions.first, dimensions.second);
     }
 
     void setConstraintBuffer(sf::Vector2i window_resolution, int buffer)
     {
         m_constraint_border = buffer;
+
+        m_world_size = window_resolution;
 
         m_horozontal_constraints.x = buffer;
         m_vertical_constraints.x = buffer;
@@ -71,6 +78,11 @@ public:
     void setAttractionFactor(float x)
     {
         m_attraction_factor = x;
+    }
+
+    void setDrag(float drag)
+    {
+        m_drag = drag;
     }
 
     void setParticleVelocity(Particle &particle, sf::Vector2f v)
@@ -100,7 +112,8 @@ public:
 
 private:
     uint32_t m_num_substep = 1;
-    sf::Vector2f gravity = {0.0f, 1000.0f};
+    sf::Vector2f m_gravity = {0.0f, 1000.0f};
+    float m_drag = 0.75f;
     sf::Vector2f m_center;
     std::vector<Particle> m_particles;
     uint8_t m_standard_radius;
@@ -109,12 +122,15 @@ private:
     float m_frame_dt = 0.0f;
     float m_attraction_factor = 0.1f;
 
+    sf::Vector2i m_world_size;
+
+    // for rectangle border
     sf::Vector2i m_horozontal_constraints = {0, 800};
     sf::Vector2i m_vertical_constraints = {0, 800};
     int m_constraint_border = 0; // distance from edge of window
+    // for rectangle border
 
-    std::vector<std::vector<std::vector<Particle>>> m_grid;
-    std::pair<uint8_t, uint8_t> m_grid_dimensions;
+    CollisionGrid m_grid;
     const std::vector<int8_t> x_deltas = {-1, -1, -1, 0, 0, 0, 1, 1, 1};
     const std::vector<int8_t> y_deltas = {1, 0, -1, 1, 0, -1, 1, 0, -1};
 
@@ -134,28 +150,7 @@ private:
     {
         for (Particle &particle : m_particles)
         {
-            particle.accelerate(gravity);
-        }
-    }
-
-    void checkCollisions(float dt, Particle &particle1, Particle &particle2)
-    {
-        const float response_coef = 0.75f;
-
-        const sf::Vector2f vec = particle1.position - particle2.position;
-        float dist = vec.x * vec.x + vec.y * vec.y;
-        const float minDist = particle1.radius + particle2.radius;
-        // Check overlapping
-        if (dist < minDist * minDist)
-        {
-            dist = sqrt(dist);
-            const sf::Vector2f n = vec / dist;
-            const float massRatio1 = particle1.radius / (particle1.radius + particle2.radius);
-            const float massRatio2 = particle2.radius / (particle1.radius + particle2.radius);
-            const float delta = 0.5f * response_coef * (dist - minDist);
-            // Update positions
-            particle1.position -= n * (massRatio2 * delta);
-            particle2.position += n * (massRatio1 * delta);
+            particle.accelerate(m_gravity);
         }
     }
 
@@ -191,47 +186,70 @@ private:
         }
     }
 
-    void clearGrid()
+    void applyDrag()
     {
-        for (auto &column : m_grid)
+        for (Particle &particle : m_particles)
         {
-            for (auto &cell : column)
-            {
-                cell.clear();
-            }
+            particle.slowdown(m_drag);
         }
     }
 
     void updateGrid()
     {
-        for (Particle &particle : m_particles)
+        for (int i = 0; i < getParticleCount(); i++)
         {
-            int x = static_cast<int>(particle.position.x / (m_standard_radius * 2));
-            int y = static_cast<int>(particle.position.y / (m_standard_radius * 2));
+            Particle &particle = m_particles[i];
 
-            m_grid[x][y].push_back(particle);
+            if (particle.position.x > m_standard_radius && particle.position.x < m_world_size.x - m_standard_radius &&
+                particle.position.y > m_standard_radius && particle.position.y < m_world_size.y - m_standard_radius)
+            {
+                m_grid.addObject(particle.position.x, particle.position.y, i);
+            }
+        }
+    }
+
+    void checkCollisions(float dt, int index_1, int index_2)
+    {
+
+        constexpr float response_coef = 1.0f;
+        constexpr float eps = 0.0001f;
+
+        Particle &particle_1 = m_particles[index_1];
+        Particle &particle_2 = m_particles[index_2];
+        const sf::Vector2f p2_p1 = particle_1.position - particle_2.position;
+        const float dist2 = p2_p1.x * p2_p1.x + p2_p1.y * p2_p1.y;
+        if (dist2 < m_standard_radius && dist2 > eps)
+        {
+            std::cout << "here" << std::endl;
+
+            const float dist = sqrt(dist2);
+
+            const float delta = response_coef * 0.5f * (m_standard_radius - dist);
+            const sf::Vector2f col_vec = (p2_p1 / dist) * delta;
+            particle_1.position += col_vec;
+            particle_2.position -= col_vec;
+        }
+    }
+
+    void checkParticleCellCollisions(float dt, uint32_t index, const CollisionCell &c)
+    {
+        for (uint32_t i = 0; i < c.objects_count; ++i)
+        {
+            checkCollisions(dt, index, c.objects[i]);
         }
     }
 
     void handleGrid(float dt)
     {
-        std::cout << "# Particles: " << getParticleCount() << std::endl;
-        for (int x = 0; x < m_grid_dimensions.first; x++)
+        for (int x = 1; x < m_grid.width - 1; x++) // skip far left and right
         {
-            for (int y = 0; y < m_grid_dimensions.second; y++)
+            for (int y = 1; y < m_grid.height - 1; y++) // skip top and bottom
             {
-                for (Particle &particle1 : m_grid[x][y])
+                for (auto index : m_grid.data[x][y].objects)
                 {
                     for (int i = 0; i < 9; i++)
                     {
-
-                        for (Particle &particle2 : m_grid[x + x_deltas[i]][y + y_deltas[i]])
-                        {
-                            if (&particle1 != &particle2)
-                            {
-                                checkCollisions(dt, particle1, particle2);
-                            }
-                        }
+                        checkParticleCellCollisions(dt, index, m_grid.data[x + x_deltas[i]][y + y_deltas[i]]);
                     }
                 }
             }
