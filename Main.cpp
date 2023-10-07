@@ -8,7 +8,7 @@
 constexpr uint16_t window_height = 850;
 constexpr uint16_t window_width = window_height * 1512 / 982;
 const sf::Color background_color = {0, 0, 0};
-constexpr uint8_t RADIUS = 5;
+constexpr uint8_t RADIUS = 3;
 const std::pair<uint8_t, uint8_t> gridSize = std::make_pair(ceil(window_width / (RADIUS * 2)), ceil(window_height / (RADIUS * 2)));
 
 static sf::Color getRainbow(float t)
@@ -35,15 +35,15 @@ int main()
     // Setup system parameters
     ParticleSystem particleSystem;
 
-    // const float constraint_radius = std::min(window_width, window_height) * (.9f / 2);
-    // particleSystem.setConstraint({static_cast<float>(window_width) * 0.5f, static_cast<float>(window_height) * 0.5f}, constraint_radius);
-
     particleSystem.setSubStepsCount(8);
     particleSystem.setSimulationUpdateRate(frame_rate);
 
+    particleSystem.setDrag(0.99f);
+    particleSystem.setRestitution(.90f);
+
     particleSystem.resizeGrid(gridSize);
 
-    particleSystem.setAttractionFactor(5.0f);
+    particleSystem.setAttractionFactor(50);
 
     const sf::Vector2i window_resolution = {window_width, window_height};
     particleSystem.setConstraintBuffer(window_resolution, 20);
@@ -58,11 +58,11 @@ int main()
     // Set simulation attributes
     constexpr float particle_spawn_delay = 0.025f;
     constexpr float particle_spawn_speed = 500.0f; // too slow will make particles collide off spawn
-    constexpr float particle_min_radius = 5.0f;
-    constexpr float particle_max_radius = 15.0f;
-    const sf::Vector2f particle_spawn_position = {window_width / 2, 200.0f};
+    const sf::Vector2f spawn_center = {window_width / 2, window_height / 2};
+    constexpr uint32_t spawn_radius = 300;
     constexpr uint32_t max_particle_count = 1000;
     constexpr float max_angle = 1.0f;
+    uint32_t attraction_factor = 50;
     // Set simulation attributes
 
     sf::Clock clock;
@@ -74,12 +74,36 @@ int main()
     {
 
         sf::Event event;
-        while (window.pollEvent(event)) // goes through event stack, checks if each event is the window closing
+        while (window.pollEvent(event))
         {
             if (event.type == sf::Event::Closed)
             {
                 window.close();
                 break;
+            }
+            else if (event.type == sf::Event::MouseButtonPressed)
+            {
+                sf::Vector2i mousePosition = sf::Mouse::getPosition(window);
+                particleSystem.setAttractionPoint(mousePosition);
+            }
+
+            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Q))
+            {
+                attraction_factor += 50;
+                particleSystem.setAttractionFactor(attraction_factor);
+            }
+            else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W))
+            {
+                if (attraction_factor >= 50) // negative factor deletes all points???
+                {
+                    attraction_factor -= 50;
+                    particleSystem.setAttractionFactor(attraction_factor);
+                }
+            }
+            else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::E))
+            {
+                attraction_factor = 0;
+                particleSystem.setAttractionFactor(0);
             }
         }
 
@@ -90,10 +114,17 @@ int main()
             {
                 clock.restart();
                 const float t = particleSystem.getTime();
-                Particle &particle = particleSystem.addParticle(particle_spawn_position, RADIUS);
-                const float angle = max_angle * sin(t) + M_PI * 0.5f;
+
+                const float angular_speed = 1.0f;
+                const float angle = angular_speed * t;
+
+                float spawnX = spawn_center.x + spawn_radius * cos(angle);
+                float spawnY = spawn_center.y + spawn_radius * sin(angle);
+
+                Particle &particle = particleSystem.addParticle(sf::Vector2f(spawnX, spawnY), RADIUS);
+
                 particleSystem.setParticleVelocity(particle, particle_spawn_speed * sf::Vector2f{cos(angle), sin(angle)});
-                particle.color = getRainbow(t);
+                particle.color = getRainbow(t / 2);
             }
         }
         else if (clock.getElapsedTime().asSeconds() >= wait_time)
