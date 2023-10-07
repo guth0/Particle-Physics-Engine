@@ -8,8 +8,8 @@
 constexpr uint16_t window_height = 800;
 constexpr uint16_t window_width = window_height * 1512 / 982;
 const sf::Color background_color = {0, 0, 0};
-constexpr uint8_t RADIUS = 5;
-const std::pair<uint8_t, uint8_t> gridSize = std::make_pair(ceil(window_width / (RADIUS * 2)), ceil(window_height / (RADIUS * 2)));
+constexpr uint8_t RADIUS = 30;
+const std::pair<uint16_t, uint16_t> gridSize = std::make_pair(ceil(window_width / (RADIUS * 2)), ceil(window_height / (RADIUS * 2)));
 
 static sf::Color getRainbow(float t)
 {
@@ -23,6 +23,8 @@ static sf::Color getRainbow(float t)
 
 int main()
 {
+
+    std::cout << "Grid dimensions (" << gridSize.first << ", " << gridSize.second << ")" << std::endl;
 
     // Set up window
     sf::ContextSettings settings;
@@ -43,7 +45,7 @@ int main()
 
     particleSystem.setDrag(0.98f);
 
-    particleSystem.resizeGrid(gridSize);
+    particleSystem.resizeGrid(gridSize, RADIUS * 2);
 
     particleSystem.setAttractionFactor(400.0f);
 
@@ -74,11 +76,11 @@ int main()
     constexpr float wait_time = 1.5f; // wait x seconds before spawning any particles
     bool has_waited = false;
 
-    // Particle &particle1 = particleSystem.addParticle(sf::Vector2f{8 * RADIUS, 7 * RADIUS}, RADIUS);
+    Particle &particle1 = particleSystem.addParticle(sf::Vector2f{8 * RADIUS, 7 * RADIUS}, RADIUS);
 
-    // Particle &particle2 = particleSystem.addParticle(sf::Vector2f{8 * RADIUS, 8 * RADIUS}, RADIUS);
+    Particle &particle2 = particleSystem.addParticle(sf::Vector2f{8 * RADIUS, 8 * RADIUS}, RADIUS);
 
-    // bool colored = false;
+    bool colored = false;
 
     while (window.isOpen())
     {
@@ -99,7 +101,6 @@ int main()
             }
             else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W))
             {
-                std::cout << "Attraction Factor pre = " << attraction_factor << std::endl;
                 attraction_factor -= 50;
                 particleSystem.setAttractionFactor(attraction_factor);
             }
@@ -118,34 +119,39 @@ int main()
         }
 
         // Spawn particles
-        if (has_waited)
+        // if (has_waited)
+        // {
+        //     if (particleSystem.getParticleCount() < max_particle_count)
+        //     {
+        //         if (clock.getElapsedTime().asSeconds() >= particle_spawn_delay)
+        //         {
+        //             clock.restart();
+        //             const float t = particleSystem.getTime();
+
+        //             // const float angle = max_angle * sin(t / 2) + M_PI;
+
+        //             const float angular_speed = 1.0f; // Adjust the angular speed as needed
+        //             const float angle = angular_speed * t;
+
+        //             float spawnX = particle_spawn_position.x + spawn_radius * cos(angle);
+        //             float spawnY = particle_spawn_position.y + spawn_radius * sin(angle);
+
+        //             // Create the particle at the calculated spawn position
+        //             Particle &particle = particleSystem.addParticle(sf::Vector2f(spawnX, spawnY), RADIUS);
+
+        //             particleSystem.setParticleVelocity(particle, particle_spawn_speed * sf::Vector2f{cos(angle), sin(angle)});
+        //             particle.color = getRainbow(t / 2);
+        //         }
+        //     }
+        // }
+        // else if (clock.getElapsedTime().asSeconds() >= wait_time)
+        // {
+        //     has_waited = true;
+        // }
+        if (!colored)
         {
-            if (particleSystem.getParticleCount() < max_particle_count)
-            {
-                if (clock.getElapsedTime().asSeconds() >= particle_spawn_delay)
-                {
-                    clock.restart();
-                    const float t = particleSystem.getTime();
-
-                    // const float angle = max_angle * sin(t / 2) + M_PI;
-
-                    const float angular_speed = 1.0f; // Adjust the angular speed as needed
-                    const float angle = angular_speed * t;
-
-                    float spawnX = particle_spawn_position.x + spawn_radius * cos(angle);
-                    float spawnY = particle_spawn_position.y + spawn_radius * sin(angle);
-
-                    // Create the particle at the calculated spawn position
-                    Particle &particle = particleSystem.addParticle(sf::Vector2f(spawnX, spawnY), RADIUS);
-
-                    particleSystem.setParticleVelocity(particle, particle_spawn_speed * sf::Vector2f{cos(angle), sin(angle)});
-                    particle.color = getRainbow(t / 2);
-                }
-            }
-        }
-        else if (clock.getElapsedTime().asSeconds() >= wait_time)
-        {
-            has_waited = true;
+            particle2.color = sf::Color::Red;
+            colored = true;
         }
 
         // Spawn particles

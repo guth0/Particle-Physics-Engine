@@ -12,8 +12,9 @@ struct CollisionCell
 
     void addObject(uint32_t index)
     {
+
         objects[objects_count] = index;
-        objects_count += objects_count < max_cell_idx;
+        objects_count += objects_count <= max_cell_idx;
     }
 
     void clear()
@@ -41,27 +42,35 @@ struct CollisionGrid
     std::vector<std::vector<CollisionCell>> data;
     uint32_t height;
     uint32_t width;
+    uint16_t cell_size;
+
     CollisionGrid() = default;
 
-    CollisionGrid(int32_t width_, int32_t height_)
+    CollisionGrid(uint32_t width_, uint16_t height_, uint16_t cell_size_)
     {
         data.resize(width_, std::vector<CollisionCell>(height_));
         height = height_;
         width = width_;
+        cell_size = cell_size_;
     }
 
-    void setSize(int32_t width_, int32_t height_)
+    void setSize(uint32_t width_, uint32_t height_, uint16_t cell_size_)
     {
         data.resize(width_, std::vector<CollisionCell>(height_));
         height = height_;
         width = width_;
+        cell_size = cell_size_;
     }
 
     bool addObject(uint32_t x, uint32_t y, uint32_t index)
     {
-        const uint16_t cellX = floor(x / width);
-        const uint16_t cellY = floor(y / height);
+        const uint16_t cellX = floor(x / cell_size);
+        const uint16_t cellY = floor(y / cell_size);
+
         // Add to grid
+
+        // std::cout << cellX << ',' << cellY << std::endl;
+
         data[cellX][cellY].addObject(index);
         return true;
     }

@@ -47,9 +47,9 @@ public:
         m_frame_dt = 1.0f / static_cast<float>(rate);
     }
 
-    void resizeGrid(std::pair<uint8_t, uint8_t> dimensions)
+    void resizeGrid(std::pair<uint8_t, uint8_t> dimensions, uint16_t cell_size)
     {
-        m_grid.setSize(dimensions.first, dimensions.second);
+        m_grid.setSize(dimensions.first, dimensions.second, cell_size);
     }
 
     void setConstraintBuffer(sf::Vector2i window_resolution, int buffer)
@@ -88,6 +88,10 @@ public:
     void setParticleVelocity(Particle &particle, sf::Vector2f v)
     {
         particle.setVelocity(v, getStepDt());
+    }
+
+    void setGridSize()
+    {
     }
 
     [[nodiscard]] const std::vector<Particle> &getParticles() const
@@ -218,10 +222,8 @@ private:
         Particle &particle_2 = m_particles[index_2];
         const sf::Vector2f p2_p1 = particle_1.position - particle_2.position;
         const float dist2 = p2_p1.x * p2_p1.x + p2_p1.y * p2_p1.y;
-        if (dist2 < m_standard_radius && dist2 > eps)
+        if (dist2 < m_standard_radius && dist2 > 0)
         {
-            std::cout << "here" << std::endl;
-
             const float dist = sqrt(dist2);
 
             const float delta = response_coef * 0.5f * (m_standard_radius - dist);
