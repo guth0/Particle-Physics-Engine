@@ -32,6 +32,16 @@ int main()
     window.setFramerateLimit(frame_rate);
     // Set up window
 
+    // Set simulation attributes
+    constexpr float particle_spawn_delay = 0.025f;
+    constexpr float particle_spawn_speed = 500.0f; // too slow will make particles collide off spawn
+    const sf::Vector2f spawn_center = {window_width / 2, window_height / 2};
+    constexpr uint32_t spawn_radius = 300;
+    constexpr uint32_t max_particle_count = 1000;
+    constexpr float max_angle = 1.0f;
+    uint32_t attraction_factor = 50;
+    // Set simulation attributes
+
     // Setup system parameters
     ParticleSystem particleSystem;
 
@@ -43,31 +53,23 @@ int main()
 
     particleSystem.resizeGrid(gridSize);
 
-    particleSystem.setAttractionFactor(50);
+    particleSystem.setAttractionFactor(attraction_factor);
 
     const sf::Vector2i window_resolution = {window_width, window_height};
     particleSystem.setConstraintBuffer(window_resolution, 20);
 
-    particleSystem.setCenter(static_cast<sf::Vector2f>(window_resolution));
+    particleSystem.setCenter(static_cast<sf::Vector2f>(window_resolution / 2));
+
+    particleSystem.setAttractionPoint(static_cast<sf::Vector2i>(spawn_center));
 
     particleSystem.setStandardRadius(RADIUS);
     // Setup system parameters
 
     Renderer renderer{window};
 
-    // Set simulation attributes
-    constexpr float particle_spawn_delay = 0.025f;
-    constexpr float particle_spawn_speed = 500.0f; // too slow will make particles collide off spawn
-    const sf::Vector2f spawn_center = {window_width / 2, window_height / 2};
-    constexpr uint32_t spawn_radius = 300;
-    constexpr uint32_t max_particle_count = 1000;
-    constexpr float max_angle = 1.0f;
-    uint32_t attraction_factor = 50;
-    // Set simulation attributes
-
     sf::Clock clock;
 
-    constexpr float wait_time = 0.5f; // wait x seconds before spawning any particles
+    constexpr float wait_time = 1.0f; // wait x seconds before spawning any particles
     bool has_waited = false;
 
     while (window.isOpen())
@@ -81,11 +83,11 @@ int main()
                 window.close();
                 break;
             }
-            else if (event.type == sf::Event::MouseButtonPressed)
-            {
-                sf::Vector2i mousePosition = sf::Mouse::getPosition(window);
-                particleSystem.setAttractionPoint(mousePosition);
-            }
+            // else if (event.type == sf::Event::MouseButtonPressed)
+            // {
+            //     sf::Vector2i mousePosition = sf::Mouse::getPosition(window);
+            //     particleSystem.setAttractionPoint(mousePosition);
+            // }
 
             if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Q))
             {
